@@ -1,0 +1,4 @@
+*.ofx
+*.csv
+*-backup-*.json
+!test/fixtures/fechamento-teste.ofx

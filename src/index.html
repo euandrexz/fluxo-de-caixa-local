@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Acompanhe seu fluxo de caixa, importe extratos e organize seus pagamentos.">
+  <title>Fluxo de Caixa Local</title>
+  <link rel="stylesheet" href="style.css">
+  <script defer src="core.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <aside class="sidebar">
+    <a class="brand" href="#painel"><span class="logo" data-icon="wallet"></span><span>Fluxo de Caixa Local</span></a>
+    <nav aria-label="Menu principal">
+      <a href="#painel" data-page="painel"><i data-icon="dashboard"></i>Visão geral</a>
+      <a href="#movimentos" data-page="movimentos"><i data-icon="activity"></i>Lançamentos</a>
+      <a href="#contas" data-page="contas"><i data-icon="bank"></i>Contas bancárias</a>
+      <a href="#etiquetas" data-page="etiquetas"><i data-icon="tag"></i>Etiquetas</a>
+      <a href="#importacoes" data-page="importacoes"><i data-icon="history"></i>Importações</a>
+      <a href="#backup" data-page="backup"><i data-icon="lock"></i>Backup</a>
+    </nav>
+    <div class="side-bottom"><i data-icon="lock"></i><span>Dados neste navegador</span></div>
+  </aside>
+  <main>
+    <div class="top"><span class="breadcrumb">Financeiro <span class="slash">/</span> <strong id="crumb">Visão geral</strong></span><div class="workspace-mode"><span id="mode" class="pill"></span><button id="switch" class="compact" type="button"></button></div></div>
+    <div class="content">
+      <header class="page-head">
+        <div><h1 id="title">Fluxo de caixa</h1><p id="subtitle"></p></div>
+        <div class="action"><button class="button primary" data-action="import"><i data-icon="upload"></i> Importar extrato</button><button class="button" data-action="add"><i data-icon="plus"></i> Novo lançamento</button></div>
+      </header>
+      <div id="page"></div>
+    </div>
+  </main>
+  <dialog id="modal" aria-labelledby="modal-title"><form id="form"></form></dialog>
+  <div id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
