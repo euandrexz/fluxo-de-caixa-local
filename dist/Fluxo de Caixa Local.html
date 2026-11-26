@@ -452,6 +452,7 @@ const today = () => new Intl.DateTimeFormat('sv-SE', {timeZone:'America/Sao_Paul
 const id = () => globalThis.crypto?.randomUUID?.() ?? String(Date.now()) + '-' + Math.random().toString(36).slice(2);
 const blank = Caixa.emptyData;
 const storage = 'fluxo-de-caixa-local.v1';
+const publicDemo = document.body.hasAttribute('data-public-demo');
 let demo, real, demoData, toastTimer, loadedStorage;
 function loadData(snapshot) {
   const saved = JSON.parse(snapshot);
@@ -461,7 +462,7 @@ function loadData(snapshot) {
   loadedStorage = snapshot;
 }
 try {
-  loadData(localStorage.getItem(storage));
+  loadData(publicDemo ? null : localStorage.getItem(storage));
 } catch {
   real = blank();
   demoData = Caixa.upgrade(example());
@@ -491,7 +492,8 @@ function example() {
     id:'ex-'+index, date:month+'-'+String(Math.min(d, day)).padStart(2,'0'),
     description, amount, accountId, tags:[tags[tag]], person, reason:'', internal:false
   }));
-  return {...blank(),accounts,tags,rows};
+  const keywords = publicDemo ? [{id:'demo-bm',term:'Fornecedor BM',tag:'Fornecedor BM'}] : [];
+  return {...blank(),accounts,tags,rows,keywords};
 }
 
 const data = () => demo ? demoData : real;
@@ -500,12 +502,16 @@ function commit(next, mode = demo) {
 }
 
 function saveStorage(saved) {
+  const snapshot = JSON.stringify(saved);
+  if (publicDemo) {
+    loadData(snapshot);
+    return;
+  }
   const latest = localStorage.getItem(storage);
   if (latest !== loadedStorage) {
     try { loadData(latest); } catch { loadedStorage = latest; }
     throw new Error('Os dados mudaram em outra aba. Feche esta janela e abra novamente antes de salvar.');
   }
-  const snapshot = JSON.stringify(saved);
   try { localStorage.setItem(storage,snapshot); }
   catch { throw new Error('O navegador não conseguiu salvar. Confira o espaço e a permissão de armazenamento.'); }
   loadData(snapshot);
@@ -656,6 +662,9 @@ function renderImports() {
 }
 
 function renderBackup() {
+  if (publicDemo) return `<section class="panel task-panel"><h2>Backup de exemplo</h2>
+    <p>Você pode baixar uma cópia dos dados da demonstração. Para voltar aos dados iniciais, clique em <strong>Reiniciar demo</strong>.</p>
+    ${action('download-backup','Baixar backup de exemplo','down')}</section>`;
   return `<div class="accounts">
     <section class="panel task-panel"><h2>Baixar cópia do caixa</h2><p>O backup inclui contas, lançamentos, etiquetas, regras e histórico de importações.</p>
       <p class="note">${demo ? 'Saia da demonstração para baixar seus dados.' : 'Guarde o arquivo JSON em local seguro. Ele contém os dados financeiros registrados no painel.'}</p>
@@ -671,8 +680,8 @@ function render() {
   const [name,title,subtitle] = pages[current];
   $('#crumb').textContent = name;
   $('#title').textContent = title;
-  $('#subtitle').textContent = subtitle;
-  $('#switch').textContent = demo ? 'Sair da demonstração' : 'Ver demonstração';
+  $('#subtitle').textContent = publicDemo && current === 'painel' ? 'Explore os saldos ou importe um extrato fictício para testar a atualização do caixa.' : subtitle;
+  $('#switch').textContent = publicDemo ? 'Reiniciar demo' : demo ? 'Sair da demonstração' : 'Ver demonstração';
   $('#mode').textContent = demo ? 'Dados fictícios' : 'Meu caixa';
   document.querySelectorAll('[data-page]').forEach(link => {
     if (link.dataset.page === current) link.setAttribute('aria-current','page');
@@ -864,14 +873,17 @@ function openRow(row, preselected) {
 function openImport(preselected) {
   if (!data().accounts.length) { openAccount(null, openImport); return; }
   let parsed, filename;
-  dialog('Importar extrato', `
-    <label class="full">Conta do extrato<select name="account" required>${accountOptions(preselected ?? (data().accounts.length === 1 ? data().accounts[0].id : ''),'Selecione uma conta')}</select></label>
+  const selected = publicDemo ? 'principal' : preselected ?? (data().accounts.length === 1 ? data().accounts[0].id : '');
+  dialog(publicDemo ? 'Importar extrato de exemplo' : 'Importar extrato', `
+    <label class="full">Conta do extrato<select name="account" required ${publicDemo ? 'disabled' : ''}>${accountOptions(selected,'Selecione uma conta')}</select></label>
+    ${publicDemo ? '<p class="note full">Este extrato fictício inclui uma venda e um pagamento a fornecedor.</p>' : `
     <label class="full">Arquivo OFX ou CSV<input name="file" required type="file" accept=".ofx,.csv"></label>
     <p class="note full">No CSV, use Data, Descrição e Valor. Use valores negativos para saídas. Você também pode usar colunas Entrada e Saída.
     <a class="link" download="modelo-extrato.csv" href="data:text/csv;charset=utf-8,%EF%BB%BFData%3BDescri%C3%A7%C3%A3o%3BValor%3BPessoa%0A30%2F10%2F2026%3BVenda%20chip%3B25%2C00%3BCliente%20balc%C3%A3o%0A30%2F10%2F2026%3BCompra%20de%20estoque%3B-120%2C00%3BFornecedor%20BM">Baixar modelo</a></p>
-    <div class="full"><h3>Conferir com o banco</h3><p class="note">O saldo de fechamento vem do OFX quando disponível. Se o arquivo não trouxer saldo, informe o valor e a data que constam no extrato.</p></div>
-    ${input('Saldo de fechamento (opcional)','closingAmount','','inputmode="decimal" placeholder="0,00"')}
-    ${input('Data do fechamento','closingDate','','type="date"')}
+    <div class="full"><h3>Conferir com o banco</h3><p class="note">O saldo de fechamento vem do OFX quando disponível. Se o arquivo não trouxer saldo, informe o valor e a data que constam no extrato.</p></div>`}
+    ${publicDemo ? '<input type="hidden" name="closingAmount"><input type="hidden" name="closingDate">' : `
+      ${input('Saldo de fechamento (opcional)','closingAmount','','inputmode="decimal" placeholder="0,00"')}
+      ${input('Data do fechamento','closingDate','','type="date"')}`}
     <div class="full" id="preview" role="status"></div>
     `, 'Confirmar importação', () => {
       const plan = prepare();
@@ -930,6 +942,27 @@ function openImport(preselected) {
     }
   }
 
+  function loadStatement(source, name) {
+    parsed = Caixa.readStatement(source);
+    filename = name;
+    form.elements.closingAmount.value = amountText(parsed.closing?.amount);
+    form.elements.closingDate.value = parsed.closing?.date ||
+      parsed.rows.reduce((last,row) => row.date > last ? row.date : last,'');
+    refresh();
+  }
+
+  if (publicDemo) {
+    const date = today();
+    const sample = example();
+    const closing = (Caixa.balance(sample.accounts[0],sample.rows,date) / 100 + 125 - 45).toFixed(2);
+    const ofxDate = date.replace(/-/g,'');
+    loadStatement(`<OFX><CURDEF>BRL<BANKTRANLIST>
+      <STMTTRN><DTPOSTED>${ofxDate}<TRNAMT>125.00<FITID>DEMO-IN-01<NAME>Venda de chips no balcão</STMTTRN>
+      <STMTTRN><DTPOSTED>${ofxDate}<TRNAMT>-45.00<FITID>DEMO-OUT-01<NAME>Pix Fornecedor BM</STMTTRN>
+      </BANKTRANLIST><LEDGERBAL><BALAMT>${closing}<DTASOF>${ofxDate}</LEDGERBAL></OFX>`,'extrato-de-exemplo.ofx');
+    return;
+  }
+
   let version = 0;
   form.oninput = event => { if (['closingAmount','closingDate'].includes(event.target.name)) refresh(); };
   form.onchange = async event => {
@@ -946,12 +979,7 @@ function openImport(preselected) {
     try {
       const source = await readLocalFile(file);
       if (current !== version || !modal.open || !preview.isConnected) return;
-      parsed = Caixa.readStatement(source);
-      filename = file.name;
-      form.elements.closingAmount.value = amountText(parsed.closing?.amount);
-      form.elements.closingDate.value = parsed.closing?.date ||
-        parsed.rows.reduce((last,row) => row.date > last ? row.date : last,'');
-      refresh();
+      loadStatement(source,file.name);
     } catch (error) {
       if (current === version && preview.isConnected) {
         preview.textContent = '';
@@ -979,8 +1007,8 @@ function openUndo(batch) {
 }
 
 function downloadBackup() {
-  if (demo) return;
-  const blob = new Blob([JSON.stringify(Caixa.backup(real),null,2)],{type:'application/json'});
+  if (demo && !publicDemo) return;
+  const blob = new Blob([JSON.stringify(Caixa.backup(data()),null,2)],{type:'application/json'});
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
@@ -1079,10 +1107,13 @@ document.addEventListener('click', event => {
 });
 $('#switch').addEventListener('click', () => {
   try {
-    commit(data(), !demo);
+    if (publicDemo) {
+      commit(example());
+      location.hash = 'painel';
+    } else commit(data(), !demo);
     Object.assign(filter,{account:'',type:'',tag:'',search:'',month:today().slice(0,7)});
     render();
-    notice(demo ? 'Demonstração com dados fictícios.' : 'Você está no seu caixa.');
+    notice(publicDemo ? 'Dados de exemplo restaurados.' : demo ? 'Demonstração com dados fictícios.' : 'Você está no seu caixa.');
   } catch (error) { notice(error.message); }
 });
 $('#page').addEventListener('input', event => {
@@ -1104,7 +1135,7 @@ $('#page').addEventListener('change', event => {
 });
 window.addEventListener('hashchange', render);
 window.addEventListener('storage', event => {
-  if (event.key !== storage) return;
+  if (publicDemo || event.key !== storage) return;
   try {
     loadData(event.newValue);
     if (modal.open) {
@@ -1114,6 +1145,10 @@ window.addEventListener('storage', event => {
     render();
   } catch { notice('Não foi possível ler a atualização da outra aba.'); }
 });
+if (publicDemo) {
+  $('[data-action="import"]').innerHTML = `${icon('upload')} Importar extrato de exemplo`;
+  $('.side-bottom span').textContent = 'Alterações válidas nesta aba';
+}
 render();
 
 </script>

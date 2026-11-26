@@ -2,6 +2,12 @@
 
 Painel de fluxo de caixa em reais para uso local. Acompanha os saldos das contas bancárias, as entradas e saídas e as despesas por etiqueta. A importação aceita OFX e CSV, registra um histórico, permite desfazer um lote e compara o saldo calculado com o fechamento do extrato.
 
+## Demonstração online
+
+[Abrir a demo no GitHub Pages](https://euandrexz.github.io/fluxo-de-caixa-local/).
+
+A demo abre com contas e movimentações fictícias. Use **Importar extrato de exemplo** para testar a atualização de saldo, a conciliação e o histórico direto no navegador. As alterações ficam na aba até recarregar a página ou clicar em **Reiniciar demo**.
+
 ## Como usar
 
 1. Baixe o [arquivo HTML](dist/Fluxo%20de%20Caixa%20Local.html) e abra no navegador.
@@ -22,3 +28,5 @@ node scripts/build.cjs
 ```
 
 O OFX em `test/fixtures/` usa dados fictícios para verificar a leitura do extrato e a conferência do saldo.
+
+A compilação também gera a demo em `docs/index.html`. O GitHub Pages publica a pasta `docs/` da branch `main`.
